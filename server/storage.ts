@@ -76,7 +76,11 @@ export class DatabaseStorage implements IStorage {
         summary: true,
       },
     });
-    return result || undefined;
+    return result ? {
+      ...result,
+      extractedPdf: result.extractedPdf || undefined,
+      summary: result.summary || undefined,
+    } : undefined;
   }
 
   async getExtractions(): Promise<ExtractionWithDetails[]> {
@@ -92,7 +96,11 @@ export class DatabaseStorage implements IStorage {
         summary: true,
       },
     });
-    return result;
+    return result.map(item => ({
+      ...item,
+      extractedPdf: item.extractedPdf || undefined,
+      summary: item.summary || undefined,
+    }));
   }
 
   async updateExtractionStatus(id: number, status: string, errorMessage?: string): Promise<void> {

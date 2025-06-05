@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import pdfParse from "pdf-parse";
+// Dynamic import to avoid initialization issues
+let pdfParse: any;
 import tesseract from "node-tesseract-ocr";
 import { storage } from "./storage";
 import { generateSummary } from "./openai";
@@ -100,6 +101,9 @@ export async function processExtraction(extractionId: number): Promise<void> {
 }
 
 async function extractTextFromPDF(filePath: string): Promise<string> {
+  if (!pdfParse) {
+    pdfParse = (await import("pdf-parse")).default;
+  }
   const dataBuffer = fs.readFileSync(filePath);
   const data = await pdfParse(dataBuffer);
   return data.text;
