@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Play } from "lucide-react";
+import { Play, FileText, X, Plus } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -19,9 +20,17 @@ interface FileWithId extends File {
   id?: number;
 }
 
+interface DocumentCriteria {
+  id?: number;
+  name: string;
+  keywords: string;
+  fileName: string;
+}
+
 export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }: ExtractionCriteriaProps) {
-  const [keywords, setKeywords] = useState("revenue, profit margins, quarterly results, financial outlook");
-  const [extractionScope, setExtractionScope] = useState("all");
+  const [extractionName, setExtractionName] = useState(`Extraction ${new Date().toLocaleDateString()}`);
+  const [documentCriteria, setDocumentCriteria] = useState<DocumentCriteria[]>([]);
+  const [extractionScope, setExtractionScope] = useState("per-document");
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [includeContext, setIncludeContext] = useState(false);
   const [completeSentences, setCompleteSentences] = useState(true);
@@ -48,14 +57,67 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
     },
   });
 
+  // Initialize document criteria when files are uploaded
+  useEffect(() => {
+    if (uploadedFiles.length > 0 && documentCriteria.length === 0) {
+      const initialCriteria = uploadedFiles.map((file, index) => ({
+        id: (file as FileWithId).id,
+        name: `Document ${index + 1}`,
+        keywords: "",
+        fileName: file.name,
+      }));
+      setDocumentCriteria(initialCriteria);
+    }
+  }, [uploadedFiles]);
+
+  const addDocumentCriteria = () => {
+    const newCriteria: DocumentCriteria = {
+      name: `Document ${documentCriteria.length + 1}`,
+      keywords: "",
+      fileName: `Custom Document ${documentCriteria.length + 1}`,
+    };
+    setDocumentCriteria([...documentCriteria, newCriteria]);
+  };
+
+  const removeDocumentCriteria = (index: number) => {
+    setDocumentCriteria(documentCriteria.filter((_, i) => i !== index));
+  };
+
+  const updateDocumentCriteria = (index: number, field: keyof DocumentCriteria, value: string) => {
+    const updated = [...documentCriteria];
+    updated[index] = { ...updated[index], [field]: value };
+    setDocumentCriteria(updated);
+  };
+
   const handleStartExtraction = () => {
-    if (!keywords.trim()) {
+    if (!extractionName.trim()) {
       toast({
-        title: "Keywords required",
-        description: "Please enter at least one keyword or phrase",
+        title: "Extraction name required",
+        description: "Please enter a name for this extraction",
         variant: "destructive",
       });
       return;
+    }
+
+    if (extractionScope === "per-document" && documentCriteria.length === 0) {
+      toast({
+        title: "Document criteria required",
+        description: "Please specify keywords for at least one document",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (extractionScope === "per-document") {
+      const emptyKeywords = documentCriteria.filter(doc => !doc.keywords.trim());
+      if (emptyKeywords.length > 0) {
+        toast({
+          title: "Keywords required",
+          description: "Please enter keywords for all documents",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     if (uploadedFiles.length === 0) {
@@ -67,7 +129,7 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
       return;
     }
 
-    // Get document IDs from uploaded files (assuming they have been uploaded)
+    // Get document IDs from uploaded files
     const documentIds = (uploadedFiles as FileWithId[])
       .map(file => file.id)
       .filter(id => id !== undefined);
@@ -81,9 +143,14 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
       return;
     }
 
+    // Combine all keywords for the extraction
+    const allKeywords = extractionScope === "per-document" 
+      ? documentCriteria.map(doc => doc.keywords).join(", ")
+      : documentCriteria.length > 0 ? documentCriteria[0].keywords : "";
+
     const extractionData = {
-      name: `Extraction ${new Date().toLocaleString()}`,
-      keywords: keywords.trim(),
+      name: extractionName.trim(),
+      keywords: allKeywords.trim(),
       extractionScope,
       caseSensitive,
       includeContext,
@@ -107,16 +174,77 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <Label className="block text-sm font-medium text-slate-900 mb-2">Keywords & Phrases</Label>
-            <Textarea 
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none" 
-              rows={4}
-              placeholder="Enter keywords separated by commas&#10;e.g., revenue, profit, expenses, budget"
-              value={keywords}
-              onChange={(e) => setKeywords(e.target.value)}
+            <Label className="block text-sm font-medium text-slate-900 mb-2">Extraction Name</Label>
+            <Input
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="Enter a name for this extraction"
+              value={extractionName}
+              onChange={(e) => setExtractionName(e.target.value)}
             />
-            <p className="text-xs text-slate-500 mt-1">Use commas to separate multiple keywords or phrases</p>
           </div>
+
+          {extractionScope === "per-document" && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <Label className="block text-sm font-medium text-slate-900">Document Keywords</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addDocumentCriteria}
+                  className="text-primary border-primary hover:bg-blue-50"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Document
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                {documentCriteria.map((doc, index) => (
+                  <Card key={index} className="border border-slate-200 bg-slate-50">
+                    <CardContent className="p-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="bg-blue-100 rounded-lg p-2 mt-1">
+                          <FileText className="text-blue-600 w-4 h-4" />
+                        </div>
+                        <div className="flex-1 space-y-3">
+                          <div>
+                            <Label className="text-sm font-medium text-slate-700">Document Name</Label>
+                            <Input
+                              className="mt-1"
+                              placeholder="Enter document name"
+                              value={doc.name}
+                              onChange={(e) => updateDocumentCriteria(index, 'name', e.target.value)}
+                            />
+                            <p className="text-xs text-slate-500 mt-1">File: {doc.fileName}</p>
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-slate-700">Keywords</Label>
+                            <Textarea
+                              className="mt-1"
+                              rows={3}
+                              placeholder="Enter keywords separated by commas&#10;e.g., revenue, profit, expenses, budget"
+                              value={doc.keywords}
+                              onChange={(e) => updateDocumentCriteria(index, 'keywords', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeDocumentCriteria(index)}
+                          className="text-slate-400 hover:text-red-500 mt-1"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <Label className="block text-sm font-medium text-slate-900 mb-2">Extraction Scope</Label>
@@ -149,7 +277,7 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
                 <Checkbox 
                   id="include-context"
                   checked={includeContext}
-                  onCheckedChange={(checked) => setCaseSensitive(!!checked)}
+                  onCheckedChange={(checked) => setIncludeContext(!!checked)}
                 />
                 <Label htmlFor="include-context" className="text-sm text-slate-700">
                   Include surrounding context
