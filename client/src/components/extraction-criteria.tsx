@@ -57,24 +57,18 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
     },
   });
 
-  // Initialize document criteria when files are uploaded
+  // Clear document criteria if no files are uploaded
   useEffect(() => {
-    if (uploadedFiles.length > 0 && documentCriteria.length === 0) {
-      const initialCriteria = uploadedFiles.map((file, index) => ({
-        id: (file as FileWithId).id,
-        name: `Document ${index + 1}`,
-        keywords: "",
-        fileName: file.name,
-      }));
-      setDocumentCriteria(initialCriteria);
+    if (uploadedFiles.length === 0) {
+      setDocumentCriteria([]);
     }
   }, [uploadedFiles]);
 
   const addDocumentCriteria = () => {
     const newCriteria: DocumentCriteria = {
-      name: `Document ${documentCriteria.length + 1}`,
+      name: "",
       keywords: "",
-      fileName: `Custom Document ${documentCriteria.length + 1}`,
+      fileName: "",
     };
     setDocumentCriteria([...documentCriteria, newCriteria]);
   };
@@ -193,6 +187,7 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
                   size="sm"
                   onClick={addDocumentCriteria}
                   className="text-primary border-primary hover:bg-blue-50"
+                  disabled={uploadedFiles.length === 0}
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Add Document
@@ -209,14 +204,39 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
                         </div>
                         <div className="flex-1 space-y-3">
                           <div>
-                            <Label className="text-sm font-medium text-slate-700">Document Name</Label>
+                            <Label className="text-sm font-medium text-slate-700">Select Document</Label>
+                            <Select 
+                              value={doc.fileName} 
+                              onValueChange={(value) => {
+                                const selectedFile = uploadedFiles.find(f => f.name === value);
+                                updateDocumentCriteria(index, 'fileName', value);
+                                updateDocumentCriteria(index, 'id', (selectedFile as FileWithId)?.id?.toString() || '');
+                                updateDocumentCriteria(index, 'name', selectedFile?.name.replace('.pdf', '') || '');
+                              }}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="Choose a document..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {uploadedFiles.map((file, fileIndex) => (
+                                  <SelectItem key={fileIndex} value={file.name}>
+                                    {file.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {doc.fileName && (
+                              <p className="text-xs text-slate-500 mt-1">Selected: {doc.fileName}</p>
+                            )}
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-slate-700">Document Alias (Optional)</Label>
                             <Input
                               className="mt-1"
-                              placeholder="Enter document name"
+                              placeholder="Enter custom name for this document"
                               value={doc.name}
                               onChange={(e) => updateDocumentCriteria(index, 'name', e.target.value)}
                             />
-                            <p className="text-xs text-slate-500 mt-1">File: {doc.fileName}</p>
                           </div>
                           <div>
                             <Label className="text-sm font-medium text-slate-700">Keywords</Label>
@@ -243,6 +263,13 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
                   </Card>
                 ))}
               </div>
+              
+              {uploadedFiles.length === 0 && (
+                <div className="text-center py-6 text-slate-500">
+                  <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                  <p className="text-sm">Upload PDF files first to configure document-specific keywords</p>
+                </div>
+              )}
             </div>
           )}
 
