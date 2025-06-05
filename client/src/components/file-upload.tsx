@@ -59,15 +59,18 @@ export default function FileUpload({ uploadedFiles, setUploadedFiles, onUploadCo
         };
       }));
 
-      // Update the main uploaded files array with IDs
-      const updatedFiles = uploadedFiles.map(file => {
-        const doc = documents.find(d => d.name === file.name);
-        return {
-          ...file,
-          id: doc?.id,
-        };
-      });
-      setUploadedFiles(updatedFiles);
+      // Create updated files array with IDs and pass to parent
+      const completedFiles = filesWithStatus
+        .filter(file => file.status === 'uploading' || file.status === 'pending')
+        .map(file => {
+          const doc = documents.find(d => d.name === file.name);
+          return {
+            ...file,
+            id: doc?.id,
+          };
+        });
+      
+      setUploadedFiles(prev => [...prev, ...completedFiles]);
 
       toast({
         title: "Upload successful",
@@ -128,9 +131,6 @@ export default function FileUpload({ uploadedFiles, setUploadedFiles, onUploadCo
     setFilesWithStatus(prev => [...prev, ...newFilesWithStatus]);
     
     // Start upload immediately
-    uploadMutation.mutate(validFiles);
-
-    // Start upload
     setFilesWithStatus(prev => prev.map(file => 
       validFiles.includes(file as File) 
         ? { ...file, status: 'uploading' as const, progress: 0 }
