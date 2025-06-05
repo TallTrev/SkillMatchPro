@@ -1,0 +1,132 @@
+Role: Expert Software Designer 🧑‍🎨
+You are an expert software designer tasked with architecting a web application that processes PDF documents to extract specific information, generate new documents, and summarize them. The application must be user-friendly, robust, and scalable.
+
+Project Goal:
+Design a web application that allows users to upload multiple PDF documents, specify information to be extracted from them, have the system create a new consolidated PDF from only this extracted text, and then generate a summary of this newly created document. The final extracted PDF document must be stored in a database.
+
+Core Functional Requirements:
+User Authentication & Management (Optional, but consider):
+
+Allow users to register and log in, or design for anonymous usage if appropriate.
+
+PDF Upload:
+
+Users must be able to upload one or more PDF documents simultaneously.
+
+Handle various PDF sizes and formats (text-based, image-based/scanned requiring OCR).
+
+Information Specification for Extraction:
+
+Users need a clear and intuitive way to specify what information should be extracted from the uploaded PDFs. This could be based on:
+
+Keywords or phrases.
+
+Regular expressions.
+
+Specific page numbers or ranges.
+
+Pre-defined templates or zones (if applicable for structured PDFs).
+
+Potentially, interactive selection on a PDF preview.
+
+The system should allow these specifications to be applied across all uploaded documents or on a per-document basis.
+
+PDF Processing & Text Extraction Engine:
+
+The backend must parse the uploaded PDFs.
+
+If PDFs are image-based, Optical Character Recognition (OCR) must be performed to convert images of text into machine-readable text.
+
+Extract only the text segments that match the user's specifications. This is not a general summarization of the original PDFs at this stage.
+
+New PDF Document Generation:
+
+Compile all extracted text segments (from potentially multiple original PDFs) into a single, new PDF document.
+
+This new PDF should contain only the extracted text, maintaining readability and basic formatting where possible.
+
+Post-Summary Generation:
+
+After the new PDF (containing only the extracted text) is created, the system must generate a concise summary of this new document.
+
+The summary should capture the key information present in the extracted content.
+
+Document Storage & Retrieval:
+
+The newly generated PDF document (the one with extracted text) must be stored in a database.
+
+Store associated metadata (e.g., upload date, user (if applicable), original source PDF names, criteria used for extraction, date of new PDF creation).
+
+Optionally, store the generated summary alongside the new PDF.
+
+Users should be able to view, download, or manage their generated PDFs and summaries.
+
+User Interface (UI) / User Experience (UX):
+
+Clean, intuitive, and responsive web interface.
+
+Clear progress indicators for uploads, processing, extraction, and generation steps.
+
+Easy way to view results (extracted PDF, summary).
+
+Design Deliverables Expected:
+Please provide a comprehensive design document covering the following aspects:
+
+System Architecture:
+
+High-level overview (e.g., client-server, microservices).
+
+Key components/modules (Frontend, Backend API, PDF Processing Service, OCR Service, Summarization Service, Database).
+
+Interactions between components.
+
+Frontend Design Considerations:
+
+Key screens/views (e.g., Upload Page, Extraction Criteria Page, Results/Dashboard Page).
+
+User workflow for a typical use case.
+
+Backend Design Considerations:
+
+API endpoint design (e.g., for uploads, specifying criteria, retrieving results).
+
+Logic for PDF parsing, OCR integration, text extraction algorithms/strategies.
+
+Logic for new PDF generation.
+
+Logic for summary generation (suggest potential NLP techniques or models).
+
+Asynchronous processing considerations for long-running tasks.
+
+Database Design:
+
+Schema design (tables, fields, relationships).
+
+Considerations for storing PDF files (e.g., as BLOBs, file path references with a separate file store).
+
+Technology Stack Suggestions:
+
+Recommend suitable technologies for frontend, backend, database, PDF manipulation libraries, OCR libraries, and summarization libraries/APIs. Justify your choices.
+
+Data Flow Diagram:
+
+Illustrate how data moves through the system from PDF upload to storage and display of the final PDF and summary.
+
+Key Challenges & Mitigation Strategies:
+
+Identify potential challenges (e.g., accuracy of OCR, complexity of extraction logic, performance with large PDFs, generating meaningful summaries) and suggest how to address them.
+
+Scalability and Performance:
+
+Briefly touch upon how the system can be designed to handle a growing number of users and documents.
+
+Non-Functional Requirements (to keep in mind):
+Accuracy: High accuracy in text extraction and OCR is crucial.
+
+Performance: Processing should be reasonably fast, with good feedback to the user.
+
+Usability: The system must be easy for non-technical users to operate.
+
+Security: Standard web application security practices should be considered, especially for user data and uploaded documents.
+
+Please provide a detailed and well-structured design.
