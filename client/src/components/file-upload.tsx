@@ -45,8 +45,10 @@ export default function FileUpload({ uploadedFiles, setUploadedFiles, onUploadCo
       const response = await apiRequest('POST', '/api/documents', formData);
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       const documents: UploadedDocument[] = data.documents;
+      console.log('Upload successful, documents:', documents);
+      console.log('Original files:', variables);
       
       // Update file status to completed and store document IDs
       setFilesWithStatus(prev => prev.map(file => {
@@ -59,16 +61,11 @@ export default function FileUpload({ uploadedFiles, setUploadedFiles, onUploadCo
         };
       }));
 
-      // Create updated files array with IDs and pass to parent
-      const completedFiles = filesWithStatus
-        .filter(file => file.status === 'uploading' || file.status === 'pending')
-        .map(file => {
-          const doc = documents.find(d => d.name === file.name);
-          return {
-            ...file,
-            id: doc?.id,
-          };
-        });
+      // Use the original uploaded files with their IDs assigned
+      const completedFiles = variables.map(originalFile => {
+        const doc = documents.find(d => d.name === originalFile.name);
+        return Object.assign(originalFile, { id: doc?.id });
+      });
       
       setUploadedFiles(prev => [...prev, ...completedFiles]);
 
