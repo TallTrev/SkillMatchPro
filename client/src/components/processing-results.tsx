@@ -5,39 +5,46 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Eye, ExternalLink, Copy, Save, Plus, Share, FileText as FileExport } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ExtractionWithDetails } from "@shared/schema";
 
 interface ProcessingResultsProps {
   extractionId: number;
   onComplete: () => void;
 }
 
+interface ExtractionResponse {
+  extraction: ExtractionWithDetails;
+}
+
 export default function ProcessingResults({ extractionId, onComplete }: ProcessingResultsProps) {
   const [pollingEnabled, setPollingEnabled] = useState(true);
   const { toast } = useToast();
 
-  const { data: extraction, isLoading } = useQuery({
+  const { data: extractionResponse, isLoading } = useQuery<ExtractionResponse, Error>({
     queryKey: [`/api/extractions/${extractionId}`],
     refetchInterval: pollingEnabled ? 2000 : false,
     enabled: !!extractionId,
   });
 
+  const extraction = extractionResponse?.extraction;
+
   useEffect(() => {
-    if (extraction?.extraction?.status === 'completed') {
+    if (extraction?.status === 'completed') {
       setPollingEnabled(false);
       onComplete();
       toast({
         title: "Extraction completed",
         description: "Your PDF has been processed and summary generated successfully",
       });
-    } else if (extraction?.extraction?.status === 'failed') {
+    } else if (extraction?.status === 'failed') {
       setPollingEnabled(false);
       toast({
         title: "Extraction failed",
-        description: extraction.extraction.errorMessage || "An error occurred during processing",
+        description: extraction.errorMessage || "An error occurred during processing",
         variant: "destructive",
       });
     }
-  }, [extraction?.extraction?.status, onComplete, toast]);
+  }, [extraction?.status, onComplete, toast]);
 
   if (isLoading || !extraction) {
     return (
@@ -52,10 +59,10 @@ export default function ProcessingResults({ extractionId, onComplete }: Processi
     );
   }
 
-  const ext = extraction.extraction;
-  const isCompleted = ext.status === 'completed';
-  const isFailed = ext.status === 'failed';
-  const isProcessing = ext.status === 'processing';
+  const ext = extractionResponse?.extraction;
+  const isCompleted = ext?.status === 'completed';
+  const isFailed = ext?.status === 'failed';
+  const isProcessing = ext?.status === 'processing';
 
   const handleDownloadPDF = async () => {
     try {
@@ -82,7 +89,7 @@ export default function ProcessingResults({ extractionId, onComplete }: Processi
   };
 
   const handleCopySummary = async () => {
-    if (ext.summary?.content) {
+    if (ext?.summary?.content) {
       try {
         await navigator.clipboard.writeText(ext.summary.content);
         toast({
@@ -203,6 +210,7 @@ export default function ProcessingResults({ extractionId, onComplete }: Processi
                     <Button 
                       variant="link" 
                       className="mt-3 text-primary hover:text-blue-700 text-sm font-medium"
+                      onClick={() => window.open(`/api/extractions/${extractionId}/pdf`, '_blank')}
                     >
                       <ExternalLink className="w-3 h-3 mr-1" />
                       Open Preview

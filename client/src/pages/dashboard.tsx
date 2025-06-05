@@ -8,8 +8,13 @@ import ProcessingResults from "@/components/processing-results";
 import ProcessSteps from "@/components/process-steps";
 import RecentActivity from "@/components/recent-activity";
 
+// Define FileWithId interface
+export interface FileWithId extends File {
+  id?: number;
+}
+
 export default function Dashboard() {
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<FileWithId[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
   const [activeExtraction, setActiveExtraction] = useState<number | null>(null);
 

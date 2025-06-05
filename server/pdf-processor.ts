@@ -213,7 +213,7 @@ async function generateExtractedPDF(
 
   // Add extracted content
   for (const extractedText of extractedTexts) {
-    // Check if we need a new page
+    // Check if we need a new page for the context header
     if (yPosition < 100) {
       currentPage = pdfDoc.addPage();
       yPosition = 750;
@@ -227,47 +227,107 @@ async function generateExtractedPDF(
       font: boldFont,
       color: rgb(0.3, 0.3, 0.7),
     });
-    yPosition -= 15;
+    yPosition -= 15; // Space after context header
 
-    // Wrap and add main text
-    const words = extractedText.text.split(" ");
-    let currentLine = "";
-    
-    for (const word of words) {
-      const testLine = currentLine + (currentLine ? " " : "") + word;
-      const textWidth = font.widthOfTextAtSize(testLine, 12);
-      
-      if (textWidth > pageWidth - 2 * margin && currentLine) {
-        currentPage.drawText(currentLine, {
+    // Split text by newlines and process each line
+    const textLines = extractedText.text.split('\n');
+
+    for (const textLine of textLines) {
+      // Apply word wrapping to the current line segment
+      const words = textLine.split(" ");
+      let currentWrappedLine = "";
+
+      for (const word of words) {
+        const testLine = currentWrappedLine + (currentWrappedLine ? " " : "") + word;
+        const textWidth = font.widthOfTextAtSize(testLine, 12);
+
+        // Check for word wrapping
+        if (textWidth > pageWidth - 2 * margin && currentWrappedLine) {
+          // Check if we need a new page before drawing a wrapped line
+          if (yPosition < 100) {
+            currentPage = pdfDoc.addPage();
+            yPosition = 750;
+             // Redraw context header on new page if desired (optional, for simplicity skipping for now)
+            currentPage.drawText(`Match (cont.): ${extractedText.context}`, {
+                x: margin,
+                y: yPosition - 15, // Adjust position
+                size: 10,
+                font: boldFont,
+                color: rgb(0.3, 0.3, 0.7),
+            });
+             yPosition -= 30; // Space after continued header
+          }
+
+          currentPage.drawText(currentWrappedLine, {
+            x: margin,
+            y: yPosition,
+            size: 12,
+            font,
+            color: rgb(0, 0, 0),
+          });
+          yPosition -= lineHeight;
+          currentWrappedLine = word;
+
+           // Check for new page after drawing a wrapped line
+            if (yPosition < 100) {
+                currentPage = pdfDoc.addPage();
+                yPosition = 750;
+                // Redraw context header on new page if desired
+                currentPage.drawText(`Match (cont.): ${extractedText.context}`, {
+                    x: margin,
+                    y: yPosition - 15, // Adjust position
+                    size: 10,
+                    font: boldFont,
+                    color: rgb(0.3, 0.3, 0.7),
+                });
+                 yPosition -= 30; // Space after continued header
+            }
+
+        } else {
+          currentWrappedLine = testLine;
+        }
+      }
+
+      // Add remaining text for the current line segment
+      if (currentWrappedLine) {
+         // Check if we need a new page before drawing the last part of a line segment
+         if (yPosition < 100) {
+            currentPage = pdfDoc.addPage();
+            yPosition = 750;
+             // Redraw context header on new page if desired
+            currentPage.drawText(`Match (cont.): ${extractedText.context}`, {
+                x: margin,
+                y: yPosition - 15, // Adjust position
+                size: 10,
+                font: boldFont,
+                color: rgb(0.3, 0.3, 0.7),
+            });
+             yPosition -= 30; // Space after continued header
+         }
+        currentPage.drawText(currentWrappedLine, {
           x: margin,
           y: yPosition,
           size: 12,
           font,
           color: rgb(0, 0, 0),
         });
-        yPosition -= lineHeight;
-        currentLine = word;
+        yPosition -= lineHeight; // Move down after drawing a line segment
 
-        // Check for new page
+         // Check for new page after drawing the last part of a line segment
         if (yPosition < 100) {
           currentPage = pdfDoc.addPage();
           yPosition = 750;
+            // Redraw context header on new page if desired
+            currentPage.drawText(`Match (cont.): ${extractedText.context}`, {
+                x: margin,
+                y: yPosition - 15, // Adjust position
+                size: 10,
+                font: boldFont,
+                color: rgb(0.3, 0.3, 0.7),
+            });
+             yPosition -= 30; // Space after continued header
         }
-      } else {
-        currentLine = testLine;
       }
-    }
-
-    // Add remaining text
-    if (currentLine) {
-      currentPage.drawText(currentLine, {
-        x: margin,
-        y: yPosition,
-        size: 12,
-        font,
-        color: rgb(0, 0, 0),
-      });
-      yPosition -= lineHeight;
     }
 
     yPosition -= 20; // Add space between extracts

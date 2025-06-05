@@ -10,14 +10,11 @@ import { Play, FileText, X, Plus } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { FileWithId } from "../pages/dashboard"; // Import FileWithId
 
 interface ExtractionCriteriaProps {
-  uploadedFiles: File[];
+  uploadedFiles: FileWithId[];
   onExtractionStart: (extractionId: number) => void;
-}
-
-interface FileWithId extends File {
-  id?: number;
 }
 
 interface DocumentCriteria {
@@ -124,18 +121,9 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
     }
 
     // Get document IDs from uploaded files
-    const documentIds = (uploadedFiles as FileWithId[])
+    const documentIds = uploadedFiles
       .map(file => file.id)
-      .filter(id => id !== undefined);
-
-    if (documentIds.length === 0) {
-      toast({
-        title: "Files not processed",
-        description: "Please wait for files to finish uploading",
-        variant: "destructive",
-      });
-      return;
-    }
+      .filter(id => id !== undefined) as number[];
 
     // Combine all keywords for the extraction
     const allKeywords = extractionScope === "per-document" 

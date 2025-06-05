@@ -8,9 +8,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+interface FileWithId extends File {
+  id?: number;
+}
+
 interface FileUploadProps {
-  uploadedFiles: File[];
-  setUploadedFiles: (files: File[]) => void;
+  uploadedFiles: FileWithId[];
+  setUploadedFiles: (files: FileWithId[]) => void;
   onUploadComplete: () => void;
 }
 
@@ -21,7 +25,8 @@ interface UploadedDocument {
   mimeType: string;
 }
 
-interface FileWithStatus extends File {
+interface FileWithStatus {
+  originalFile: File;
   id?: number;
   status: 'pending' | 'uploading' | 'completed' | 'error';
   progress?: number;
@@ -35,7 +40,7 @@ export default function FileUpload({ uploadedFiles, setUploadedFiles, onUploadCo
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const uploadMutation = useMutation({
+  const uploadMutation = useMutation<any, Error, File[], any>({
     mutationFn: async (files: File[]) => {
       const formData = new FormData();
       files.forEach(file => {
@@ -45,29 +50,37 @@ export default function FileUpload({ uploadedFiles, setUploadedFiles, onUploadCo
       const response = await apiRequest('POST', '/api/documents', formData);
       return response.json();
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (data: { documents: UploadedDocument[] }, variables: File[]) => {
       const documents: UploadedDocument[] = data.documents;
       console.log('Upload successful, documents:', documents);
       console.log('Original files:', variables);
-      
-      // Update file status to completed and store document IDs
-      setFilesWithStatus(prev => prev.map(file => {
-        const doc = documents.find(d => d.name === file.name);
+
+      // Update file status to completed and store document IDs in local state
+      setFilesWithStatus((prevFiles: FileWithStatus[]) => prevFiles.map(fileWithStatus => {
+        const doc = documents.find(d => d.name === fileWithStatus.originalFile.name);
         return {
-          ...file,
+          ...fileWithStatus,
           id: doc?.id,
           status: 'completed' as const,
           progress: 100,
         };
       }));
 
-      // Use the original uploaded files with their IDs assigned
-      const completedFiles = variables.map(originalFile => {
-        const doc = documents.find(d => d.name === originalFile.name);
-        return Object.assign(originalFile, { id: doc?.id });
+      // Prepare files with essential properties and IDs to pass to the parent component's state
+      const uploadedFilesForParent: FileWithId[] = documents.map(doc => {
+        const originalFile = variables.find(file => file.name === doc.name);
+        
+        // Create a FileWithId object using properties from the server response and original file
+        return {
+          name: doc.name,
+          size: doc.size,
+          type: originalFile?.type || doc.mimeType, // Prefer original type, fallback to mimeType from server
+          lastModified: originalFile?.lastModified || Date.now(), // Include lastModified from original if available
+          id: doc.id,
+        } as FileWithId; // Explicitly cast to FileWithId
       });
-      
-      setUploadedFiles(prev => [...prev, ...completedFiles]);
+
+      setUploadedFiles((prevUploadedFiles: FileWithId[]) => [...prevUploadedFiles, ...uploadedFilesForParent]);
 
       toast({
         title: "Upload successful",
@@ -104,7 +117,7 @@ export default function FileUpload({ uploadedFiles, setUploadedFiles, onUploadCo
         });
         return false;
       }
-      
+
       if (file.size > 50 * 1024 * 1024) {
         toast({
           title: "File too large",
@@ -120,16 +133,16 @@ export default function FileUpload({ uploadedFiles, setUploadedFiles, onUploadCo
     if (validFiles.length === 0) return;
 
     const newFilesWithStatus: FileWithStatus[] = validFiles.map(file => ({
-      ...file,
+      originalFile: file, // Store the original file
       status: 'pending',
       needsOCR: false, // Will be determined after upload
     }));
 
-    setFilesWithStatus(prev => [...prev, ...newFilesWithStatus]);
-    
+    setFilesWithStatus((prevFiles: FileWithStatus[]) => [...prevFiles, ...newFilesWithStatus]);
+
     // Start upload immediately
-    setFilesWithStatus(prev => prev.map(file => 
-      validFiles.includes(file as File) 
+    setFilesWithStatus((prevFiles: FileWithStatus[]) => prevFiles.map(file => 
+      validFiles.includes(file.originalFile) 
         ? { ...file, status: 'uploading' as const, progress: 0 }
         : file
     ));
@@ -154,9 +167,20 @@ export default function FileUpload({ uploadedFiles, setUploadedFiles, onUploadCo
   };
 
   const removeFile = (index: number) => {
-    const newFiles = filesWithStatus.filter((_, i) => i !== index);
-    setFilesWithStatus(newFiles);
-    setUploadedFiles(newFiles.filter(f => f.status === 'completed'));
+    const newFilesWithStatus = filesWithStatus.filter((_, i) => i !== index);
+    setFilesWithStatus(newFilesWithStatus);
+    
+    // Update the parent component's state with the remaining completed files
+    const remainingUploadedFiles: FileWithId[] = newFilesWithStatus
+      .filter(f => f.status === 'completed' && f.id !== undefined)
+      .map(f => ({
+        name: f.originalFile.name,
+        size: f.originalFile.size,
+        type: f.originalFile.type,
+        lastModified: f.originalFile.lastModified,
+        id: f.id,
+      } as FileWithId)); // Explicitly cast to FileWithId
+    setUploadedFiles(remainingUploadedFiles);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -217,9 +241,9 @@ export default function FileUpload({ uploadedFiles, setUploadedFiles, onUploadCo
                       <FileText className="text-red-600 w-5 h-5" />
                     </div>
                     <div>
-                      <p className="font-medium text-slate-900">{file.name}</p>
+                      <p className="font-medium text-slate-900">{file.originalFile.name}</p>
                       <p className="text-sm text-slate-500">
-                        {formatFileSize(file.size)} • {file.needsOCR ? 'Scanned PDF (OCR required)' : 'Text-based PDF'}
+                        {formatFileSize(file.originalFile.size)} • {file.needsOCR ? 'Scanned PDF (OCR required)' : 'Text-based PDF'}
                       </p>
                       {file.status === 'uploading' && file.progress !== undefined && (
                         <Progress value={file.progress} className="w-32 mt-1" />
