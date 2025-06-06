@@ -1,24 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, User, Menu, HelpCircle, History } from "lucide-react";
-import FileUpload from "@/components/file-upload";
-import ExtractionCriteria from "@/components/extraction-criteria";
-import ProcessingResults from "@/components/processing-results";
-import ProcessSteps from "@/components/process-steps";
+import { FileText, User, Menu, HelpCircle } from "lucide-react";
 import RecentActivity from "@/components/recent-activity";
 
-// Define FileWithId interface
-export interface FileWithId extends File {
-  id?: number;
-}
-
-
 export default function Dashboard() {
-  const [uploadedFiles, setUploadedFiles] = useState<FileWithId[]>([]);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [activeExtraction, setActiveExtraction] = useState<number | null>(null);
-
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -35,11 +21,7 @@ export default function Dashboard() {
               </div>
             </div>
             <nav className="hidden md:flex items-center space-x-6">
-              <a href="#" className="text-slate-600 hover:text-primary transition-colors">Dashboard</a>
-              <a href="#" className="text-slate-600 hover:text-primary transition-colors">
-                <History className="w-4 h-4 inline mr-1" />
-                History
-              </a>
+              <a href="/" className="text-slate-600 hover:text-primary transition-colors">Main Page</a>
               <a href="#" className="text-slate-600 hover:text-primary transition-colors">
                 <HelpCircle className="w-4 h-4 inline mr-1" />
                 Help
@@ -56,54 +38,15 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Main Content - Only show Recent Activity */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Process Steps */}
-        <ProcessSteps currentStep={currentStep} />
-
         <div className="space-y-8">
-          {/* Step 1: Upload Section */}
-          {currentStep === 0 && (
-            <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
-              <CardHeader>
-                <CardTitle className="text-2xl font-semibold text-slate-900">Upload PDF Documents</CardTitle>
-                <p className="text-slate-600">Upload one or more PDF files to extract specific text content and generate summaries.</p>
-              </CardHeader>
-              <CardContent>
-                <FileUpload 
-                  uploadedFiles={uploadedFiles}
-                  setUploadedFiles={setUploadedFiles}
-                  onUploadComplete={() => setCurrentStep(1)}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 3: Processing Results - Show first when active */}
-          {activeExtraction && currentStep >= 2 && (
-            <ProcessingResults 
-              extractionId={activeExtraction}
-              onComplete={() => setCurrentStep(3)}
-            />
-          )}
-
-          {/* Step 2: Extraction Criteria */}
-          {currentStep >= 1 && (
-            <ExtractionCriteria 
-              uploadedFiles={uploadedFiles}
-              onExtractionStart={(extractionId) => {
-                setActiveExtraction(extractionId);
-                setCurrentStep(2);
-              }}
-            />
-          )}
-
-          {/* Recent Activity - Only show when not in active workflow */}
-          {currentStep === 3 && <RecentActivity />}
+          {/* Recent Activity - Always show on Dashboard */}
+          <RecentActivity />
         </div>
       </main>
 
-      {/* Footer */}
+      {/* Footer - Keep for consistency */}
       <footer className="bg-white border-t border-slate-200 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
