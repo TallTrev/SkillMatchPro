@@ -50,6 +50,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ documents });
     } catch (error) {
       console.error("Error uploading documents:", error);
+      // Log the detailed error for debugging
+      console.error("Detailed upload error:", error instanceof Error ? error.message : error);
+      console.error(error);
       res.status(500).json({ message: "Failed to upload documents" });
     }
   });

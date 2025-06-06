@@ -4,6 +4,7 @@ import {
   extractionDocuments, 
   extractedPdfs, 
   summaries,
+  extractedTexts,
   type Document, 
   type InsertDocument,
   type Extraction,
@@ -12,7 +13,9 @@ import {
   type InsertExtractedPdf,
   type Summary,
   type InsertSummary,
-  type ExtractionWithDetails
+  type ExtractionWithDetails,
+  type ExtractedText,
+  type InsertExtractedText
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -39,6 +42,11 @@ export interface IStorage {
   // Summaries
   createSummary(summary: InsertSummary): Promise<Summary>;
   getSummary(extractionId: number): Promise<Summary | undefined>;
+  
+  // Extracted Texts
+  saveExtractedTexts(texts: InsertExtractedText[]): Promise<ExtractedText[]>;
+  getExtractedTexts(extractionId: number): Promise<ExtractedText[]>;
+  getExtractedTextsByDocument(extractionId: number, documentId: number): Promise<ExtractedText[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -74,6 +82,7 @@ export class DatabaseStorage implements IStorage {
         },
         extractedPdf: true,
         summary: true,
+        extractedTexts: true,
       },
     });
     return result ? {
@@ -153,6 +162,34 @@ export class DatabaseStorage implements IStorage {
       .from(summaries)
       .where(eq(summaries.extractionId, extractionId));
     return summary || undefined;
+  }
+
+  async saveExtractedTexts(texts: InsertExtractedText[]): Promise<ExtractedText[]> {
+    return await db
+      .insert(extractedTexts)
+      .values(texts)
+      .returning();
+  }
+
+  async getExtractedTexts(extractionId: number): Promise<ExtractedText[]> {
+    return await db
+      .select()
+      .from(extractedTexts)
+      .where(eq(extractedTexts.extractionId, extractionId))
+      .orderBy(extractedTexts.sectionNumber, extractedTexts.page);
+  }
+
+  async getExtractedTextsByDocument(extractionId: number, documentId: number): Promise<ExtractedText[]> {
+    return await db
+      .select()
+      .from(extractedTexts)
+      .where(
+        and(
+          eq(extractedTexts.extractionId, extractionId),
+          eq(extractedTexts.documentId, documentId)
+        )
+      )
+      .orderBy(extractedTexts.sectionNumber, extractedTexts.page);
   }
 }
 

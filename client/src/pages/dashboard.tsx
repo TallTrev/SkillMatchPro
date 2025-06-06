@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, User, Menu, HelpCircle, History } from "lucide-react";
 import FileUpload from "@/components/file-upload";
-import ExtractionCriteria from "@/components/extraction-criteria";
+import ExtractionCriteria, { type ExtractionCriteriaData } from "@/components/extraction-criteria";
 import ProcessingResults from "@/components/processing-results";
 import ProcessSteps from "@/components/process-steps";
 import RecentActivity from "@/components/recent-activity";
@@ -13,11 +13,18 @@ export interface FileWithId extends File {
   id?: number;
 }
 
-
 export default function Dashboard() {
   const [uploadedFiles, setUploadedFiles] = useState<FileWithId[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
   const [activeExtraction, setActiveExtraction] = useState<number | null>(null);
+
+  // Handle step navigation
+  const handleStepClick = (stepId: number) => {
+    // Only allow navigating to completed or current steps
+    if (stepId <= currentStep) {
+      setCurrentStep(stepId);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -59,18 +66,18 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Process Steps */}
-        <ProcessSteps currentStep={currentStep} />
+        <ProcessSteps currentStep={currentStep} onStepClick={handleStepClick} />
 
         <div className="space-y-8">
-          {/* Step 1: Upload Section */}
-          {currentStep === 0 && (
+          {/* Step 1: Upload Section (Visible on Step 0 and later)*/}
+          {currentStep >= 0 && (
             <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
               <CardHeader>
                 <CardTitle className="text-2xl font-semibold text-slate-900">Upload PDF Documents</CardTitle>
                 <p className="text-slate-600">Upload one or more PDF files to extract specific text content and generate summaries.</p>
               </CardHeader>
               <CardContent>
-                <FileUpload 
+                <FileUpload
                   uploadedFiles={uploadedFiles}
                   setUploadedFiles={setUploadedFiles}
                   onUploadComplete={() => setCurrentStep(1)}
@@ -79,27 +86,53 @@ export default function Dashboard() {
             </Card>
           )}
 
-          {/* Step 3: Processing Results - Show first when active */}
-          {activeExtraction && currentStep >= 2 && (
-            <ProcessingResults 
-              extractionId={activeExtraction}
-              onComplete={() => setCurrentStep(3)}
-            />
-          )}
-
-          {/* Step 2: Extraction Criteria */}
+          {/* Step 2: Extraction Criteria (Visible on Step 1 and later)*/}
           {currentStep >= 1 && (
-            <ExtractionCriteria 
-              uploadedFiles={uploadedFiles}
-              onExtractionStart={(extractionId) => {
-                setActiveExtraction(extractionId);
-                setCurrentStep(2);
-              }}
-            />
+            <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-2xl font-semibold text-slate-900">Extraction Criteria</CardTitle>
+                <p className="text-slate-600">Define the criteria for text extraction from your uploaded documents.</p>
+              </CardHeader>
+              <CardContent>
+                <ExtractionCriteria
+                  uploadedFiles={uploadedFiles}
+                  onExtractionStart={(extractionId) => {
+                    setActiveExtraction(extractionId);
+                    setCurrentStep(2);
+                  }}
+                />
+              </CardContent>
+            </Card>
           )}
 
-          {/* Recent Activity - Only show when not in active workflow */}
-          {currentStep === 3 && <RecentActivity />}
+          {/* Step 3: Processing Results (Visible on Step 2 and later if active extraction exists)*/}
+          {currentStep >= 2 && activeExtraction && (
+             <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-2xl font-semibold text-slate-900">Processing Results</CardTitle>
+                <p className="text-slate-600">View the results of your text extraction and summarization.</p>
+              </CardHeader>
+              <CardContent>
+                <ProcessingResults
+                  extractionId={activeExtraction}
+                  onComplete={() => setCurrentStep(3)}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 4: Recent Activity (Visible on Step 3 and later)*/}
+          {currentStep >= 3 && (
+            <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-2xl font-semibold text-slate-900">Recent Activity</CardTitle>
+                <p className="text-slate-600">Review your past extraction and processing activities.</p>
+              </CardHeader>
+               <CardContent>
+                 <RecentActivity />
+               </CardContent>
+            </Card>
+          )}
         </div>
       </main>
 

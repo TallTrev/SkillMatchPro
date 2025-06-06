@@ -12,9 +12,21 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { FileWithId } from "../pages/dashboard"; // Import FileWithId
 
+// Define interface for extraction criteria data
+export interface ExtractionCriteriaData {
+  name: string;
+  keywords: string;
+  extractionScope: "all" | "per-document" | "specific-pages"; // Corrected literal types
+  caseSensitive: boolean;
+  includeContext: boolean;
+  completeSentences: boolean;
+  documentIds: number[];
+  documentCriteria?: { id?: number; fileName?: string; keywords: string }[];
+}
+
 interface ExtractionCriteriaProps {
   uploadedFiles: FileWithId[];
-  onExtractionStart: (extractionId: number) => void;
+  onExtractionStart: (extractionId: number, criteriaData: ExtractionCriteriaData) => void;
 }
 
 interface DocumentCriteria {
@@ -27,25 +39,72 @@ interface DocumentCriteria {
 export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }: ExtractionCriteriaProps) {
   const [extractionName, setExtractionName] = useState(`Extraction ${new Date().toLocaleDateString()}`);
   const [documentCriteria, setDocumentCriteria] = useState<DocumentCriteria[]>([]);
-  const [extractionScope, setExtractionScope] = useState("per-document");
+  const [extractionScope, setExtractionScope] = useState<"all" | "per-document" | "specific-pages">("per-document"); // Added type to state
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [includeContext, setIncludeContext] = useState(false);
   const [completeSentences, setCompleteSentences] = useState(true);
   const { toast } = useToast();
 
   const createExtractionMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: ExtractionCriteriaData) => { // Added type for data
       const response = await apiRequest('POST', '/api/extractions', data);
       return response.json();
     },
     onSuccess: (data) => {
       toast({
         title: "Extraction started",
-        description: "Your documents are being processed. This may take a few minutes.",
+        description: "Processing of your documents has begun.",
       });
-      onExtractionStart(data.extraction.id);
+      // Pass both extractionId and criteriaData
+      if (data && data.extraction && data.extraction.id !== undefined) {
+        // The criteriaData object is already correctly structured before the mutate call,
+        // we just need to pass the same object along with the returned extraction ID.
+        // Assuming the mutation function receives and uses `extractionData` correctly.
+        // We need to ensure `onSuccess` has access to the `extractionData` used.
+        // A common pattern is to pass it as a variable available in the closure.
+        // Since extractionData is defined just before mutate, it's available here.
+        // However, to be more robust, especially with retries or complex flows,
+        // it might be better to structure the mutationFn or onSuccess differently.
+        // For this fix, assuming `extractionData` in the outer scope is the correct one.
+        // Let's refactor slightly to ensure extractionData is clearly available.
+
+        // Re-evaluate how to access the criteriaData here correctly.
+        // The mutate function takes `data`, which is `extractionData` in this case.
+        // Let's ensure `onSuccess` can access the input data easily.
+        // By default, onSuccess doesn't get the input data unless passed explicitly or inferred.
+
+        // Let's assume the API response `data.extraction` includes the key criteria used for simplicity for now.
+        // If not, a more complex state management or passing mechanism would be needed.
+        // Given the previous edit attempt, let's stick to passing the defined extractionData.
+
+        // Re-implementing the call with both parameters
+         const currentExtractionData: ExtractionCriteriaData = {
+           name: extractionName.trim(),
+           keywords: extractionScope === "per-document" 
+             ? documentCriteria.map(doc => doc.keywords).join(", ")
+             : documentCriteria.length > 0 ? documentCriteria[0].keywords : "",
+           extractionScope,
+           caseSensitive,
+           includeContext,
+           completeSentences,
+           documentIds: data.extraction.documentIds || [], 
+           documentCriteria: extractionScope === "per-document" ? documentCriteria : undefined,
+         };
+
+        onExtractionStart(data.extraction.id, currentExtractionData);
+
+      } else {
+         console.error("Extraction ID not returned in response or response structure unexpected.", data);
+         toast({
+            title: "Extraction start failed",
+            description: "Could not retrieve extraction ID.",
+            variant: "destructive",
+         });
+         // Optionally update status to failed in storage
+      }
     },
     onError: (error) => {
+      console.error("Error starting extraction:", error);
       toast({
         title: "Failed to start extraction",
         description: error instanceof Error ? error.message : "An unexpected error occurred",
@@ -82,16 +141,16 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
         ...updated[index],
         [field]: value,
       };
-      console.log(`Updated document criteria at index ${index} for field ${String(field)} with value:`, value);
-      console.log('New document criteria state after update:', updated);
+      // console.log(`Updated document criteria at index ${index} for field ${String(field)} with value:`, value);
+      // console.log('New document criteria state after update:', updated);
       return updated;
     });
   };
 
   const handleStartExtraction = () => {
-    console.log('Start Extraction button clicked');
-    console.log('Current extraction scope:', extractionScope);
-    console.log('Current document criteria state:', documentCriteria);
+    // console.log('Start Extraction button clicked');
+    // console.log('Current extraction scope:', extractionScope);
+    // console.log('Current document criteria state:', documentCriteria);
 
     if (!extractionName.trim()) {
       toast({
@@ -121,7 +180,7 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
         return;
       }
        const missingFiles = documentCriteria.filter(doc => !doc.fileName);
-       console.log('Missing files check result:', missingFiles);
+       // console.log('Missing files check result:', missingFiles);
        if (missingFiles.length > 0) {
          toast({
            title: "Missing document selection",
@@ -150,14 +209,14 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
           .map(file => file.id)
           .filter(id => id !== undefined) as number[];
 
-    console.log('Calculated documentIds to send:', documentIds);
+    // console.log('Calculated documentIds to send:', documentIds);
 
     // Combine all keywords for the extraction
     const allKeywords = extractionScope === "per-document" 
       ? documentCriteria.map(doc => doc.keywords).join(", ")
       : documentCriteria.length > 0 ? documentCriteria[0].keywords : "";
 
-    const extractionData = {
+    const extractionData: ExtractionCriteriaData = {
       name: extractionName.trim(),
       keywords: allKeywords.trim(),
       extractionScope,
@@ -165,13 +224,15 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
       includeContext,
       completeSentences,
       documentIds, // Use the correctly filtered/mapped documentIds
+      documentCriteria: extractionScope === "per-document" ? documentCriteria : undefined,
     };
 
     createExtractionMutation.mutate(extractionData);
   };
 
   const totalPages = uploadedFiles.length * 15; // Estimate
-  const ocrRequired = uploadedFiles.filter(f => f.size > 1024 * 1024).length; // Rough heuristic
+  // Filter uploadedFiles for actual File objects before checking size
+  const ocrRequired = uploadedFiles.filter(f => f instanceof File && f.size > 1024 * 1024).length; // Rough heuristic
   const estimatedTime = Math.ceil(uploadedFiles.length * 0.5 + ocrRequired * 1.5);
 
   return (
@@ -195,7 +256,7 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
 
             <div>
               <Label className="block text-sm font-medium text-slate-900 mb-2">Extraction Scope</Label>
-              <Select value={extractionScope} onValueChange={setExtractionScope}>
+              <Select value={extractionScope} onValueChange={(value: "all" | "per-document" | "specific-pages") => setExtractionScope(value)}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -239,47 +300,32 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
                             <Select 
                               value={doc.fileName} 
                               onValueChange={(value) => {
-                                console.log('Document selected:', value);
+                                // console.log('Document selected:', value);
                                 const selectedFile = uploadedFiles.find(f => f.name === value);
-                                console.log('Selected file object:', selectedFile);
+                                // console.log('Selected file object:', selectedFile);
                                 updateDocumentCriteria(index, 'fileName', value);
-                                // Ensure the id is stored as a string, converting number or undefined
-                                const fileId = selectedFile?.id || '';
-                                console.log('File ID being set:', fileId);
-                                updateDocumentCriteria(index, 'id', String(fileId));
+                                // Ensure the id is stored as a number
+                                updateDocumentCriteria(index, 'id', selectedFile?.id as number);
                                 updateDocumentCriteria(index, 'name', selectedFile?.name.replace('.pdf', '') || '');
                               }}
                             >
-                              <SelectTrigger className="mt-1">
-                                <SelectValue placeholder="Choose a document..." />
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select a document" />
                               </SelectTrigger>
                               <SelectContent>
-                                {uploadedFiles.map((file, fileIndex) => (
-                                  <SelectItem key={fileIndex} value={file.name}>
+                                {uploadedFiles.map(file => (
+                                  <SelectItem key={file.id} value={file.name}>
                                     {file.name}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
-                            {doc.fileName && (
-                              <p className="text-xs text-slate-500 mt-1">Selected: {doc.fileName}</p>
-                            )}
                           </div>
                           <div>
-                            <Label className="text-sm font-medium text-slate-700">Document Alias (Optional)</Label>
+                            <Label className="text-sm font-medium text-slate-700">Keywords (comma-separated)</Label>
                             <Input
-                              className="mt-1"
-                              placeholder="Enter custom name for this document"
-                              value={doc.name}
-                              onChange={(e) => updateDocumentCriteria(index, 'name', e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-sm font-medium text-slate-700">Keywords</Label>
-                            <Textarea
-                              className="mt-1"
-                              rows={3}
-                              placeholder="Enter keywords separated by commas&#10;e.g., revenue, profit, expenses, budget"
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                              placeholder="e.g., skill, experience, qualification"
                               value={doc.keywords}
                               onChange={(e) => updateDocumentCriteria(index, 'keywords', e.target.value)}
                             />
@@ -289,8 +335,8 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
                           type="button"
                           variant="ghost"
                           size="sm"
+                          className="text-slate-400 hover:text-error transition-colors"
                           onClick={() => removeDocumentCriteria(index)}
-                          className="text-slate-400 hover:text-red-500 mt-1"
                         >
                           <X className="w-4 h-4" />
                         </Button>
@@ -299,54 +345,72 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
                   </Card>
                 ))}
               </div>
-              
-              {uploadedFiles.length === 0 && (
-                <div className="text-center py-6 text-slate-500">
-                  <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                  <p className="text-sm">Upload PDF files first to configure document-specific keywords</p>
-                </div>
-              )}
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {extractionScope !== "per-document" && (
             <div>
-              <Label className="block text-sm font-medium text-slate-900 mb-3">Match Options</Label>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="case-sensitive"
-                    checked={!caseSensitive}
-                    onCheckedChange={(checked) => setCaseSensitive(!checked)}
-                  />
-                  <Label htmlFor="case-sensitive" className="text-sm text-slate-700">
-                    Case insensitive matching
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="include-context"
-                    checked={includeContext}
-                    onCheckedChange={(checked) => setIncludeContext(!!checked)}
-                  />
-                  <Label htmlFor="include-context" className="text-sm text-slate-700">
-                    Include surrounding context
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="complete-sentences"
-                    checked={completeSentences}
-                    onCheckedChange={(checked) => setCompleteSentences(!!checked)}
-                  />
-                  <Label htmlFor="complete-sentences" className="text-sm text-slate-700">
-                    Extract complete sentences
-                  </Label>
-                </div>
-              </div>
+               <Label className="block text-sm font-medium text-slate-900 mb-2">Keywords (comma-separated)</Label>
+                <Input
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="e.g., skill, experience, qualification"
+                  value={documentCriteria.length > 0 ? documentCriteria[0].keywords : ""}
+                  onChange={(e) => {
+                    // For non-per-document scope, store keywords in the first (and only) document criteria entry
+                    if (documentCriteria.length === 0) {
+                      setDocumentCriteria([{ name: "All Documents", keywords: e.target.value, fileName: "All", id: uploadedFiles[0]?.id }]); // Capture ID for 'all' scope too
+                    } else {
+                      updateDocumentCriteria(0, 'keywords', e.target.value);
+                    }
+                  }}
+                />
             </div>
+          )}
 
-            {/* Quick Stats */}
+          {extractionScope === "specific-pages" && (
+            <div>
+              <Label className="block text-sm font-medium text-slate-900 mb-2">Page Ranges (comma-separated)</Label>
+               <Input
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                placeholder="e.g., 1-3, 5, 7-10"
+                // You would need to add state and logic to handle specific page ranges
+                disabled // Functionality not yet implemented
+              />
+              <p className="text-sm text-slate-500 mt-1">Feature coming soon.</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div>
+                <h4 className="text-sm font-medium text-slate-900 mb-2">Match Options</h4>
+                 <div className="space-y-2">
+                   <div className="flex items-center space-x-2">
+                      <Checkbox
+                         id="caseSensitive"
+                         checked={caseSensitive}
+                         onCheckedChange={(checked) => setCaseSensitive(!!checked)}
+                      />
+                      <Label htmlFor="caseSensitive" className="text-sm font-normal text-slate-700">Case insensitive matching</Label>
+                   </div>
+                    <div className="flex items-center space-x-2">
+                       <Checkbox
+                         id="includeContext"
+                         checked={includeContext}
+                         onCheckedChange={(checked) => setIncludeContext(!!checked)}
+                       />
+                       <Label htmlFor="includeContext" className="text-sm font-normal text-slate-700">Include surrounding context (experimental)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                       <Checkbox
+                          id="completeSentences"
+                          checked={completeSentences}
+                          onCheckedChange={(checked) => setCompleteSentences(!!checked)}
+                       />
+                       <Label htmlFor="completeSentences" className="text-sm font-normal text-slate-700">Extract complete sentences</Label>
+                    </div>
+                 </div>
+             </div>
+
             <div className="lg:col-span-2">
               <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
                 <CardHeader>

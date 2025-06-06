@@ -57,11 +57,24 @@ export const summaries = pgTable("summaries", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const extractedTexts = pgTable("extracted_texts", {
+  id: serial("id").primaryKey(),
+  extractionId: integer("extraction_id").notNull().references(() => extractions.id),
+  documentId: integer("document_id").notNull().references(() => documents.id),
+  text: text("text").notNull(),
+  page: integer("page").notNull(),
+  sectionNumber: integer("section_number").notNull(),
+  sectionTitle: text("section_title").notNull(),
+  matchedKeywords: text("matched_keywords").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const extractionsRelations = relations(extractions, ({ many, one }) => ({
   extractionDocuments: many(extractionDocuments),
   extractedPdf: one(extractedPdfs),
   summary: one(summaries),
+  extractedTexts: many(extractedTexts),
 }));
 
 export const documentsRelations = relations(documents, ({ many }) => ({
@@ -93,6 +106,17 @@ export const summariesRelations = relations(summaries, ({ one }) => ({
   }),
 }));
 
+export const extractedTextsRelations = relations(extractedTexts, ({ one }) => ({
+  extraction: one(extractions, {
+    fields: [extractedTexts.extractionId],
+    references: [extractions.id],
+  }),
+  document: one(documents, {
+    fields: [extractedTexts.documentId],
+    references: [documents.id],
+  }),
+}));
+
 // Insert schemas
 export const insertDocumentSchema = createInsertSchema(documents).omit({
   id: true,
@@ -117,6 +141,11 @@ export const insertSummarySchema = createInsertSchema(summaries).omit({
   createdAt: true,
 });
 
+export const insertExtractedTextSchema = createInsertSchema(extractedTexts).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 export type Document = typeof documents.$inferSelect;
@@ -130,10 +159,14 @@ export type ExtractedPdf = typeof extractedPdfs.$inferSelect;
 export type InsertSummary = z.infer<typeof insertSummarySchema>;
 export type Summary = typeof summaries.$inferSelect;
 
+export type InsertExtractedText = z.infer<typeof insertExtractedTextSchema>;
+export type ExtractedText = typeof extractedTexts.$inferSelect;
+
 export type ExtractionWithDetails = Extraction & {
   extractionDocuments: (typeof extractionDocuments.$inferSelect & {
     document: Document;
   })[];
   extractedPdf?: ExtractedPdf;
   summary?: Summary;
+  extractedTexts?: ExtractedText[];
 };
