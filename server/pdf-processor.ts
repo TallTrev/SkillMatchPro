@@ -13,19 +13,9 @@ interface ExtractedText {
   context: string;
 }
 
-// Define interface for DocumentCriteria received by processExtraction
-interface ProcessDocumentCriteria {
-  id?: number; // Document ID
-  name: string; // Document alias (though we removed the field, the structure might still exist if not fully cleaned)
-  keywords: string; // Keywords for this document
-  fileName: string; // Original file name
-}
-
-export async function processExtraction(extractionId: number, documentIds?: number[], documentCriteria?: ProcessDocumentCriteria[]): Promise<void> {
+export async function processExtraction(extractionId: number): Promise<void> {
   try {
     console.log(`Starting extraction process for ID: ${extractionId}`);
-    console.log('Document IDs received in processExtraction:', documentIds);
-    console.log('Document Criteria received in processExtraction:', documentCriteria); // Log document criteria
     
     // Update status to processing
     await storage.updateExtractionStatus(extractionId, "processing");
@@ -36,43 +26,13 @@ export async function processExtraction(extractionId: number, documentIds?: numb
       throw new Error("Extraction not found");
     }
 
+    const keywords = extraction.keywords.split(",").map(k => k.trim().toLowerCase());
     const extractedTexts: ExtractedText[] = [];
 
-    // Determine which documents to process based on documentIds
-    const documentsToProcess = extraction.extractionDocuments.filter(extDoc => 
-        documentIds && documentIds.length > 0 
-            ? documentIds.map(id => Number(id)).includes(extDoc.document.id)
-            : true // If no specific documentIds are provided (e.g., scope is 'all'), process all linked documents
-    );
-
-    console.log(`Processing ${documentsToProcess.length} selected documents for extraction ID: ${extractionId}`);
-    console.log('Document IDs provided for filtering (after conversion):', documentIds?.map(id => Number(id)));
-
-    for (const extDoc of documentsToProcess) {
+    // Process each document
+    for (const extDoc of extraction.extractionDocuments) {
       const document = extDoc.document;
-      console.log(`Processing document: ${document.name} (ID: ${document.id})`);
-
-      // Find the specific keywords for this document from the provided documentCriteria
-      const specificCriteria = documentCriteria?.find(crit => Number(crit.id) === document.id);
-      console.log(`Specific criteria found for document ${document.id}:`, specificCriteria); // Log specific criteria
-      const documentKeywords = specificCriteria?.keywords.split(",").map(k => k.trim().toLowerCase()).filter(k => k !== '') || [];
-      console.log(`Keywords parsed from specific criteria for document ${document.id}:`, documentKeywords); // Log parsed keywords
-
-      if (documentKeywords.length === 0 && extraction.extractionScope === 'per-document') {
-          console.log(`Skipping document ${document.name}: No keywords specified for per-document extraction.`);
-          continue; // Skip this document if in per-document mode and no keywords are found for it
-      }
-       // Use global keywords if extraction scope is not per-document or if no specific criteria found (fallback)
-      const keywordsForExtraction = extraction.extractionScope === 'per-document' && documentKeywords.length > 0
-        ? documentKeywords
-        : extraction.keywords.split(",").map(k => k.trim().toLowerCase()).filter(k => k !== '');
-
-      console.log(`Keywords being used for extraction for document ${document.id}:`, keywordsForExtraction); // Log final keywords
-
-      if (keywordsForExtraction.length === 0) {
-           console.log(`Skipping document ${document.name}: No keywords available for extraction.`);
-          continue; // Skip if no keywords at all (global or specific)
-      }
+      console.log(`Processing document: ${document.name}`);
 
       try {
         // First try to extract text directly
@@ -84,9 +44,8 @@ export async function processExtraction(extractionId: number, documentIds?: numb
           text = await performOCR(document.originalPath);
         }
 
-        // Extract relevant text based on keywords specific to this document (or global if not per-document)
-        // Pass the determined keywordsForExtraction to extractRelevantText
-        const relevantTexts = extractRelevantText(text, keywordsForExtraction, extraction);
+        // Extract relevant text based on keywords
+        const relevantTexts = extractRelevantText(text, keywords, extraction);
         extractedTexts.push(...relevantTexts);
 
       } catch (error) {
@@ -167,82 +126,44 @@ async function performOCR(filePath: string): Promise<string> {
 }
 
 function extractRelevantText(
-  text: string,
-  keywords: string[],
+  text: string, 
+  keywords: string[], 
   extraction: any
 ): ExtractedText[] {
   const extractedTexts: ExtractedText[] = [];
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  
+  sentences.forEach((sentence, index) => {
+    const lowerSentence = sentence.toLowerCase();
+    const matchedKeywords = keywords.filter(keyword => 
+      extraction.caseSensitive 
+        ? sentence.includes(keyword)
+        : lowerSentence.includes(keyword)
+    );
 
-  // Split the text by lines
-  const lines = text.split('\n');
-  let sections: string[] = [];
-  let currentSectionLines: string[] = [];
-
-  // Function to determine if a line is the start of a new major section
-  const isMajorSectionStart = (line: string): boolean => {
-    const trimmedLine = line.trim();
-    // Prioritize lines that look like "Section X:"
-    if (trimmedLine.match(/^Section \d+:/i)) {
-        return true;
-    }
-     // Also consider lines that are all uppercase with at least 3 words as potential major headings
-    if (trimmedLine.length > 0 && trimmedLine === trimmedLine.toUpperCase() && trimmedLine.split(' ').length >= 3) {
-        return true;
-    }
-    return false;
-  };
-
-  // First pass: Split the text into potential sections based on major section starts and significant breaks
-  for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const trimmedLine = line.trim();
-      const prevLine = lines[i - 1];
-      const lineBeforePrev = lines[i - 2];
-
-      // Check for major section start or a strong paragraph break (two empty lines)
-      const isStrongSeparator = isMajorSectionStart(line) || 
-                               (trimmedLine === '' && prevLine?.trim() === '' && lineBeforePrev?.trim() !== '');
-
-      if (i > 0 && isStrongSeparator) {
-          // If a strong separator is detected, push the accumulated lines as a section
-          if (currentSectionLines.length > 0) {
-              sections.push(currentSectionLines.join('\n').trim());
-              currentSectionLines = []; // Start a new section
-          }
-      }
+    if (matchedKeywords.length > 0) {
+      let extractedText = sentence.trim();
       
-      // Always add the current line to the section being accumulated unless it's an empty line right after a strong separator
-      if (!(trimmedLine === '' && i > 0 && isStrongSeparator)){
-         currentSectionLines.push(line);
+      // Include context if requested
+      if (extraction.includeContext) {
+        const contextStart = Math.max(0, index - 1);
+        const contextEnd = Math.min(sentences.length - 1, index + 1);
+        const contextSentences = sentences.slice(contextStart, contextEnd + 1);
+        extractedText = contextSentences.join(". ").trim();
       }
-  }
 
-  // Add the last accumulated section
-   if (currentSectionLines.length > 0) {
-       sections.push(currentSectionLines.join('\n').trim());
-   }
+      // Ensure complete sentences if requested
+      if (extraction.completeSentences && !extractedText.match(/[.!?]$/)) {
+        extractedText += ".";
+      }
 
-  // Second pass: Filter sections based on keywords
-  for (const sectionText of sections) {
-    if (sectionText) { // Ensure section is not just empty lines
-        const lowerSectionText = sectionText.toLowerCase();
-        
-        // Check if any keyword exists in the entire section text
-        const matchedKeywords = keywords.filter(keyword => 
-           extraction.caseSensitive 
-              ? sectionText.includes(keyword)
-              : lowerSectionText.includes(keyword)
-        );
-
-        if (matchedKeywords.length > 0) {
-           extractedTexts.push({
-            text: sectionText,
-            page: 0, // Cannot accurately determine page per section this way
-            context: `Keywords matched in section: ${matchedKeywords.join(", ")}`, // More specific context
-          });
-        }
+      extractedTexts.push({
+        text: extractedText,
+        page: Math.floor(index / 50) + 1, // Estimate page number
+        context: `Keywords matched: ${matchedKeywords.join(", ")}`,
+      });
     }
-  }
+  });
 
   return extractedTexts;
 }
@@ -262,53 +183,51 @@ async function generateExtractedPDF(
   const margin = 50;
 
   // Add title
-  // currentPage.drawText("Extracted Content", {
-  //   x: margin,
-  //   y: yPosition,
-  //   size: 18,
-  //   font: boldFont,
-  //   color: rgb(0, 0, 0),
-  // });
-  // yPosition -= 40;
+  currentPage.drawText("Extracted Content", {
+    x: margin,
+    y: yPosition,
+    size: 18,
+    font: boldFont,
+    color: rgb(0, 0, 0),
+  });
+  yPosition -= 40;
 
   // Add extraction metadata
-  // currentPage.drawText(`Extraction ID: ${extractionId}`, {
-  //   x: margin,
-  //   y: yPosition,
-  //   size: 12,
-  //   font,
-  //   color: rgb(0.5, 0.5, 0.5),
-  // });
-  // yPosition -= 20;
+  currentPage.drawText(`Extraction ID: ${extractionId}`, {
+    x: margin,
+    y: yPosition,
+    size: 12,
+    font,
+    color: rgb(0.5, 0.5, 0.5),
+  });
+  yPosition -= 20;
 
-  // currentPage.drawText(`Generated: ${new Date().toLocaleString()}`, {
-  //   x: margin,
-  //   y: yPosition,
-  //   size: 12,
-  //   font,
-  //   color: rgb(0.5, 0.5, 0.5),
-  // });
-  // yPosition -= 40;
+  currentPage.drawText(`Generated: ${new Date().toLocaleString()}`, {
+    x: margin,
+    y: yPosition,
+    size: 12,
+    font,
+    color: rgb(0.5, 0.5, 0.5),
+  });
+  yPosition -= 40;
 
   // Add extracted content
   for (const extractedText of extractedTexts) {
-    // Check if we need a new page for the extracted text (adjusting for no header space)
-    // A single line of text at size 12 with line height 20 needs about 20 units of vertical space.
-    // If yPosition is less than the margin + minimum text height (e.g., 50 + 20 = 70), add a new page.
-    if (yPosition < margin + lineHeight) {
+    // Check if we need a new page for the context header
+    if (yPosition < 100) {
       currentPage = pdfDoc.addPage();
       yPosition = 750;
     }
 
-    // Remove context header
-    // currentPage.drawText(`Match: ${extractedText.context}`, {
-    //   x: margin,
-    //   y: yPosition,
-    //   size: 10,
-    //   font: boldFont,
-    //   color: rgb(0.3, 0.3, 0.7),
-    // });
-    // yPosition -= 15; // Space after context header
+    // Add context header
+    currentPage.drawText(`Match: ${extractedText.context}`, {
+      x: margin,
+      y: yPosition,
+      size: 10,
+      font: boldFont,
+      color: rgb(0.3, 0.3, 0.7),
+    });
+    yPosition -= 15; // Space after context header
 
     // Split text by newlines and process each line
     const textLines = extractedText.text.split('\n');

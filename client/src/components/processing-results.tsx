@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ExtractionWithDetails } from "@shared/schema";
 
 interface ProcessingResultsProps {
-  extractionId: number | null;
+  extractionId: number;
   onComplete: () => void;
 }
 
@@ -23,7 +23,7 @@ export default function ProcessingResults({ extractionId, onComplete }: Processi
   const { data: extractionResponse, isLoading } = useQuery<ExtractionResponse, Error>({
     queryKey: [`/api/extractions/${extractionId}`],
     refetchInterval: pollingEnabled ? 2000 : false,
-    enabled: extractionId !== null,
+    enabled: !!extractionId,
   });
 
   const extraction = extractionResponse?.extraction;
