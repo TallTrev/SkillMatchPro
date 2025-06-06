@@ -151,18 +151,34 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
     <div className="space-y-6">
       <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-slate-900">Extraction Criteria</CardTitle>
-          <p className="text-slate-600 text-sm">Specify what text content to extract from your PDFs.</p>
+          <CardTitle className="text-2xl font-semibold text-slate-900">Extraction Criteria</CardTitle>
+          <p className="text-slate-600">Specify what text content to extract from your PDFs.</p>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div>
-            <Label className="block text-sm font-medium text-slate-900 mb-2">Extraction Name</Label>
-            <Input
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="Enter a name for this extraction"
-              value={extractionName}
-              onChange={(e) => setExtractionName(e.target.value)}
-            />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <Label className="block text-sm font-medium text-slate-900 mb-2">Extraction Name</Label>
+              <Input
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                placeholder="Enter a name for this extraction"
+                value={extractionName}
+                onChange={(e) => setExtractionName(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label className="block text-sm font-medium text-slate-900 mb-2">Extraction Scope</Label>
+              <Select value={extractionScope} onValueChange={setExtractionScope}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All documents</SelectItem>
+                  <SelectItem value="per-document">Per document basis</SelectItem>
+                  <SelectItem value="specific-pages">Specific page ranges</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {extractionScope === "per-document" && (
@@ -182,7 +198,7 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
                 </Button>
               </div>
               
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {documentCriteria.map((doc, index) => (
                   <Card key={index} className="border border-slate-200 bg-slate-50">
                     <CardContent className="p-4">
@@ -261,53 +277,70 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
             </div>
           )}
 
-          <div>
-            <Label className="block text-sm font-medium text-slate-900 mb-2">Extraction Scope</Label>
-            <Select value={extractionScope} onValueChange={setExtractionScope}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All documents</SelectItem>
-                <SelectItem value="per-document">Per document basis</SelectItem>
-                <SelectItem value="specific-pages">Specific page ranges</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div>
+              <Label className="block text-sm font-medium text-slate-900 mb-3">Match Options</Label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="case-sensitive"
+                    checked={!caseSensitive}
+                    onCheckedChange={(checked) => setCaseSensitive(!checked)}
+                  />
+                  <Label htmlFor="case-sensitive" className="text-sm text-slate-700">
+                    Case insensitive matching
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="include-context"
+                    checked={includeContext}
+                    onCheckedChange={(checked) => setIncludeContext(!!checked)}
+                  />
+                  <Label htmlFor="include-context" className="text-sm text-slate-700">
+                    Include surrounding context
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="complete-sentences"
+                    checked={completeSentences}
+                    onCheckedChange={(checked) => setCompleteSentences(!!checked)}
+                  />
+                  <Label htmlFor="complete-sentences" className="text-sm text-slate-700">
+                    Extract complete sentences
+                  </Label>
+                </div>
+              </div>
+            </div>
 
-          <div>
-            <Label className="block text-sm font-medium text-slate-900 mb-3">Match Options</Label>
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="case-sensitive"
-                  checked={!caseSensitive}
-                  onCheckedChange={(checked) => setCaseSensitive(!checked)}
-                />
-                <Label htmlFor="case-sensitive" className="text-sm text-slate-700">
-                  Case insensitive matching
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="include-context"
-                  checked={includeContext}
-                  onCheckedChange={(checked) => setIncludeContext(!!checked)}
-                />
-                <Label htmlFor="include-context" className="text-sm text-slate-700">
-                  Include surrounding context
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="complete-sentences"
-                  checked={completeSentences}
-                  onCheckedChange={(checked) => setCompleteSentences(!!checked)}
-                />
-                <Label htmlFor="complete-sentences" className="text-sm text-slate-700">
-                  Extract complete sentences
-                </Label>
-              </div>
+            {/* Quick Stats */}
+            <div className="lg:col-span-2">
+              <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-slate-900">Processing Stats</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600">Total Documents</span>
+                      <span className="font-medium text-slate-900">{uploadedFiles.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600">Total Pages</span>
+                      <span className="font-medium text-slate-900">{totalPages}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600">OCR Required</span>
+                      <span className="font-medium text-warning">{ocrRequired} document{ocrRequired !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600">Est. Processing Time</span>
+                      <span className="font-medium text-slate-900">{estimatedTime}-{estimatedTime + 1} minutes</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
 
@@ -320,33 +353,6 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
               <Play className="w-4 h-4 mr-2" />
               {createExtractionMutation.isPending ? 'Starting...' : 'Start Extraction'}
             </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Quick Stats */}
-      <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-slate-900">Processing Stats</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-600">Total Documents</span>
-              <span className="font-medium text-slate-900">{uploadedFiles.length}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-600">Total Pages</span>
-              <span className="font-medium text-slate-900">{totalPages}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-600">OCR Required</span>
-              <span className="font-medium text-warning">{ocrRequired} document{ocrRequired !== 1 ? 's' : ''}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-600">Est. Processing Time</span>
-              <span className="font-medium text-slate-900">{estimatedTime}-{estimatedTime + 1} minutes</span>
-            </div>
           </div>
         </CardContent>
       </Card>

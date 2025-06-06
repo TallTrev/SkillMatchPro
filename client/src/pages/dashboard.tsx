@@ -60,9 +60,9 @@ export default function Dashboard() {
         {/* Process Steps */}
         <ProcessSteps currentStep={currentStep} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Upload Section */}
-          <div className="lg:col-span-2">
+        <div className="space-y-8">
+          {/* Step 1: Upload Section */}
+          {currentStep === 0 && (
             <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
               <CardHeader>
                 <CardTitle className="text-2xl font-semibold text-slate-900">Upload PDF Documents</CardTitle>
@@ -76,10 +76,18 @@ export default function Dashboard() {
                 />
               </CardContent>
             </Card>
-          </div>
+          )}
 
-          {/* Extraction Criteria */}
-          <div className="lg:col-span-1">
+          {/* Step 3: Processing Results - Show first when active */}
+          {activeExtraction && currentStep >= 2 && (
+            <ProcessingResults 
+              extractionId={activeExtraction}
+              onComplete={() => setCurrentStep(3)}
+            />
+          )}
+
+          {/* Step 2: Extraction Criteria */}
+          {currentStep >= 1 && (
             <ExtractionCriteria 
               uploadedFiles={uploadedFiles}
               onExtractionStart={(extractionId) => {
@@ -87,19 +95,11 @@ export default function Dashboard() {
                 setCurrentStep(2);
               }}
             />
-          </div>
+          )}
+
+          {/* Recent Activity - Only show when not in active workflow */}
+          {currentStep === 3 && <RecentActivity />}
         </div>
-
-        {/* Processing Results */}
-        {activeExtraction && (
-          <ProcessingResults 
-            extractionId={activeExtraction}
-            onComplete={() => setCurrentStep(3)}
-          />
-        )}
-
-        {/* Recent Activity */}
-        <RecentActivity />
       </main>
 
       {/* Footer */}

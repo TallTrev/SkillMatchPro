@@ -137,12 +137,12 @@ export default function ProcessingResults({ extractionId, onComplete }: Processi
   };
 
   return (
-    <Card className="mt-8 bg-white rounded-xl shadow-sm border border-slate-200">
+    <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-xl font-semibold text-slate-900">Processing Results</CardTitle>
-            <p className="text-slate-600 text-sm">
+            <CardTitle className="text-2xl font-semibold text-slate-900">Processing Results</CardTitle>
+            <p className="text-slate-600">
               {isCompleted ? 'Extraction completed successfully' : 
                isFailed ? 'Extraction failed' :
                'Processing your documents...'}
@@ -180,18 +180,23 @@ export default function ProcessingResults({ extractionId, onComplete }: Processi
             <Card className="border border-slate-200">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-slate-900">Extracted Content PDF</h4>
+                  <h4 className="font-medium text-slate-900">Extracted PDF</h4>
                   <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="sm" title="Preview">
-                      <Eye className="w-4 h-4" />
-                    </Button>
                     <Button 
                       variant="ghost" 
                       size="sm" 
                       onClick={handleDownloadPDF}
-                      title="Download"
+                      title="Download PDF"
                     >
                       <Download className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => window.open(`/api/extractions/${extractionId}/pdf`, '_blank')}
+                      title="Open in new tab"
+                    >
+                      <ExternalLink className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
@@ -207,14 +212,6 @@ export default function ProcessingResults({ extractionId, onComplete }: Processi
                       {ext.extractedPdf?.size ? `${Math.round(ext.extractedPdf.size / 1024)} KB` : '—'} • 
                       {ext.extractedPdf?.pageCount || '—'} pages
                     </p>
-                    <Button 
-                      variant="link" 
-                      className="mt-3 text-primary hover:text-blue-700 text-sm font-medium"
-                      onClick={() => window.open(`/api/extractions/${extractionId}/pdf`, '_blank')}
-                    >
-                      <ExternalLink className="w-3 h-3 mr-1" />
-                      Open Preview
-                    </Button>
                   </div>
                 </div>
 
