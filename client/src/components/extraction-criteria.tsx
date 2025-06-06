@@ -74,13 +74,25 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
     setDocumentCriteria(documentCriteria.filter((_, i) => i !== index));
   };
 
-  const updateDocumentCriteria = (index: number, field: keyof DocumentCriteria, value: string) => {
-    const updated = [...documentCriteria];
-    updated[index] = { ...updated[index], [field]: value };
-    setDocumentCriteria(updated);
+  const updateDocumentCriteria = (index: number, field: keyof DocumentCriteria, value: any) => {
+    setDocumentCriteria(prevCriteria => {
+      const updated = [...prevCriteria];
+      // Create a new object for the updated item to ensure immutability
+      updated[index] = {
+        ...updated[index],
+        [field]: value,
+      };
+      console.log(`Updated document criteria at index ${index} for field ${String(field)} with value:`, value);
+      console.log('New document criteria state after update:', updated);
+      return updated;
+    });
   };
 
   const handleStartExtraction = () => {
+    console.log('Start Extraction button clicked');
+    console.log('Current extraction scope:', extractionScope);
+    console.log('Current document criteria state:', documentCriteria);
+
     if (!extractionName.trim()) {
       toast({
         title: "Extraction name required",
@@ -90,25 +102,34 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
       return;
     }
 
-    if (extractionScope === "per-document" && documentCriteria.length === 0) {
-      toast({
-        title: "Document criteria required",
-        description: "Please specify keywords for at least one document",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (extractionScope === "per-document") {
-      const emptyKeywords = documentCriteria.filter(doc => !doc.keywords.trim());
-      if (emptyKeywords.length > 0) {
+      if (documentCriteria.length === 0) {
         toast({
-          title: "Keywords required",
-          description: "Please enter keywords for all documents",
+          title: "Document criteria required",
+          description: "Please specify keywords for at least one document",
           variant: "destructive",
         });
         return;
       }
+      const emptyKeywords = documentCriteria.filter(doc => !doc.keywords.trim());
+      if (emptyKeywords.length > 0) {
+        toast({
+          title: "Keywords required",
+          description: "Please enter keywords for all specified documents",
+          variant: "destructive",
+        });
+        return;
+      }
+       const missingFiles = documentCriteria.filter(doc => !doc.fileName);
+       console.log('Missing files check result:', missingFiles);
+       if (missingFiles.length > 0) {
+         toast({
+           title: "Missing document selection",
+           description: "Please select a file for all document criteria entries",
+           variant: "destructive",
+         });
+         return;
+       }
     }
 
     if (uploadedFiles.length === 0) {
@@ -120,10 +141,16 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
       return;
     }
 
-    // Get document IDs from uploaded files
-    const documentIds = uploadedFiles
-      .map(file => file.id)
-      .filter(id => id !== undefined) as number[];
+    // Get document IDs based on extraction scope
+    const documentIds = extractionScope === "per-document"
+      ? documentCriteria
+          .map(doc => doc.id)
+          .filter(id => id !== undefined) as number[]
+      : uploadedFiles
+          .map(file => file.id)
+          .filter(id => id !== undefined) as number[];
+
+    console.log('Calculated documentIds to send:', documentIds);
 
     // Combine all keywords for the extraction
     const allKeywords = extractionScope === "per-document" 
@@ -137,7 +164,7 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
       caseSensitive,
       includeContext,
       completeSentences,
-      documentIds,
+      documentIds, // Use the correctly filtered/mapped documentIds
     };
 
     createExtractionMutation.mutate(extractionData);
@@ -212,9 +239,14 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
                             <Select 
                               value={doc.fileName} 
                               onValueChange={(value) => {
+                                console.log('Document selected:', value);
                                 const selectedFile = uploadedFiles.find(f => f.name === value);
+                                console.log('Selected file object:', selectedFile);
                                 updateDocumentCriteria(index, 'fileName', value);
-                                updateDocumentCriteria(index, 'id', (selectedFile as FileWithId)?.id?.toString() || '');
+                                // Ensure the id is stored as a string, converting number or undefined
+                                const fileId = selectedFile?.id || '';
+                                console.log('File ID being set:', fileId);
+                                updateDocumentCriteria(index, 'id', String(fileId));
                                 updateDocumentCriteria(index, 'name', selectedFile?.name.replace('.pdf', '') || '');
                               }}
                             >

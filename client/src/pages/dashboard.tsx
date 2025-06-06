@@ -13,6 +13,7 @@ export interface FileWithId extends File {
   id?: number;
 }
 
+
 export default function Dashboard() {
   const [uploadedFiles, setUploadedFiles] = useState<FileWithId[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
