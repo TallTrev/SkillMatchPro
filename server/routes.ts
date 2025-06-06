@@ -58,7 +58,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/extractions", async (req, res) => {
     try {
       const data = insertExtractionSchema.parse(req.body);
-      const { documentIds, ...extractionData } = req.body;
+      const { documentIds, documentCriteria, ...extractionData } = req.body;
 
       if (!documentIds || !Array.isArray(documentIds) || documentIds.length === 0) {
         return res.status(400).json({ message: "Document IDs are required" });
@@ -73,7 +73,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Start background processing
-      processExtraction(extraction.id).catch(console.error);
+      processExtraction(extraction.id, documentIds, documentCriteria).catch(console.error);
 
       res.json({ extraction });
     } catch (error) {
