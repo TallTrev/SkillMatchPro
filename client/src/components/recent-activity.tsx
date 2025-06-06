@@ -3,26 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Eye, Trash, ArrowRight } from "lucide-react";
-import { useLocation } from "wouter";
-
-interface Extraction {
-  id: number;
-  name: string;
-  createdAt: string;
-  status: string;
-  keywords: string;
-  extractionDocuments?: any[];
-}
-
-interface ExtractionsData {
-  extractions: Extraction[];
-}
 
 export default function RecentActivity() {
-  const { data: extractions, isLoading } = useQuery<ExtractionsData>({
+  const { data: extractions, isLoading } = useQuery({
     queryKey: ['/api/extractions'],
   });
-  const [, navigate] = useLocation();
 
   if (isLoading) {
     return (
@@ -49,10 +34,6 @@ export default function RecentActivity() {
       default:
         return <Badge className="bg-slate-200 text-slate-500">Pending</Badge>;
     }
-  };
-
-  const handleViewExtraction = (extractionId: number) => {
-    navigate(`/?extractionId=${extractionId}`);
   };
 
   return (
@@ -122,7 +103,6 @@ export default function RecentActivity() {
                           variant="ghost" 
                           size="sm"
                           className="text-slate-400 hover:text-slate-600 transition-colors"
-                          onClick={() => handleViewExtraction(extraction.id)}
                         >
                           <Eye className="w-4 h-4" />
                         </Button>

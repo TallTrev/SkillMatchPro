@@ -165,7 +165,6 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
       includeContext,
       completeSentences,
       documentIds, // Use the correctly filtered/mapped documentIds
-      documentCriteria, // Include documentCriteria in the payload
     };
 
     createExtractionMutation.mutate(extractionData);
@@ -248,6 +247,7 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
                                 const fileId = selectedFile?.id || '';
                                 console.log('File ID being set:', fileId);
                                 updateDocumentCriteria(index, 'id', String(fileId));
+                                updateDocumentCriteria(index, 'name', selectedFile?.name.replace('.pdf', '') || '');
                               }}
                             >
                               <SelectTrigger className="mt-1">
@@ -264,6 +264,15 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
                             {doc.fileName && (
                               <p className="text-xs text-slate-500 mt-1">Selected: {doc.fileName}</p>
                             )}
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-slate-700">Document Alias (Optional)</Label>
+                            <Input
+                              className="mt-1"
+                              placeholder="Enter custom name for this document"
+                              value={doc.name}
+                              onChange={(e) => updateDocumentCriteria(index, 'name', e.target.value)}
+                            />
                           </div>
                           <div>
                             <Label className="text-sm font-medium text-slate-700">Keywords</Label>
