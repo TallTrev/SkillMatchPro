@@ -141,7 +141,7 @@ export async function processExtraction(extractionId: number): Promise<void> {
     let currentPage = page;
     let y = height - margin;
 
-    // Add title
+    // Add main title
     currentPage.drawText(`Extracted Content - ${extraction.name}`, {
       x: margin,
       y,
@@ -149,13 +149,26 @@ export async function processExtraction(extractionId: number): Promise<void> {
       color: rgb(0, 0, 0),
     });
 
-    // Add extracted texts
-    y -= fontSize + 20; // Move down after title
-    for (const text of allExtractedTexts) {
-      const lines = text.text.split('\n');
+    // Add extracted texts with their section titles
+    y -= fontSize + 20; // Move down after main title
+    for (const extractedText of allExtractedTexts) {
+      // Add section title
+      if (y < margin) {
+        currentPage = pdfDoc.addPage([595.28, 841.89]);
+        y = height - margin;
+      }
+      currentPage.drawText(`${extractedText.sectionTitle}:`, {
+        x: margin,
+        y,
+        size: fontSize + 2, // Slightly larger font for title
+        color: rgb(0, 0, 0),
+      });
+      y -= fontSize + 2; // Move down after section title
+
+      // Add section text
+      const lines = extractedText.text.split('\n');
       for (const line of lines) {
         if (y < margin) {
-          // Add new page if we run out of space
           currentPage = pdfDoc.addPage([595.28, 841.89]);
           y = height - margin;
         }
@@ -167,7 +180,7 @@ export async function processExtraction(extractionId: number): Promise<void> {
         });
         y -= fontSize + 4;
       }
-      y -= 20; // Add space between sections
+      y -= 20; // Add space between extracted segments
     }
 
     // Save the PDF

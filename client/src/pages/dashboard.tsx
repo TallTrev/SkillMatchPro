@@ -69,18 +69,30 @@ export default function Dashboard() {
         <ProcessSteps currentStep={currentStep} onStepClick={handleStepClick} />
 
         <div className="space-y-8">
-          {/* Step 1: Upload Section (Visible on Step 0 and later)*/}
-          {currentStep >= 0 && (
+          {/* Step 4: Recent Activity (Visible on Step 3 and later)*/}
+          {currentStep >= 3 && (
             <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
               <CardHeader>
-                <CardTitle className="text-2xl font-semibold text-slate-900">Upload PDF Documents</CardTitle>
-                <p className="text-slate-600">Upload one or more PDF files to extract specific text content and generate summaries.</p>
+                <CardTitle className="text-2xl font-semibold text-slate-900">Recent Activity</CardTitle>
+                <p className="text-slate-600">Review your past extraction and processing activities.</p>
+              </CardHeader>
+               <CardContent>
+                 <RecentActivity />
+               </CardContent>
+            </Card>
+          )}
+
+          {/* Step 3: Processing Results (Visible on Step 2 and later if active extraction exists)*/}
+          {currentStep >= 2 && activeExtraction && (
+             <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-2xl font-semibold text-slate-900">Processing Results</CardTitle>
+                <p className="text-slate-600">View the results of your text extraction and summarization.</p>
               </CardHeader>
               <CardContent>
-                <FileUpload
-                  uploadedFiles={uploadedFiles}
-                  setUploadedFiles={setUploadedFiles}
-                  onUploadComplete={() => setCurrentStep(1)}
+                <ProcessingResults
+                  extractionId={activeExtraction}
+                  onComplete={() => setCurrentStep(3)}
                 />
               </CardContent>
             </Card>
@@ -105,32 +117,20 @@ export default function Dashboard() {
             </Card>
           )}
 
-          {/* Step 3: Processing Results (Visible on Step 2 and later if active extraction exists)*/}
-          {currentStep >= 2 && activeExtraction && (
-             <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
-              <CardHeader>
-                <CardTitle className="text-2xl font-semibold text-slate-900">Processing Results</CardTitle>
-                <p className="text-slate-600">View the results of your text extraction and summarization.</p>
-              </CardHeader>
-              <CardContent>
-                <ProcessingResults
-                  extractionId={activeExtraction}
-                  onComplete={() => setCurrentStep(3)}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 4: Recent Activity (Visible on Step 3 and later)*/}
-          {currentStep >= 3 && (
+          {/* Step 1: Upload Section (Visible on Step 0 and later)*/}
+          {currentStep >= 0 && (
             <Card className="bg-white rounded-xl shadow-sm border border-slate-200">
               <CardHeader>
-                <CardTitle className="text-2xl font-semibold text-slate-900">Recent Activity</CardTitle>
-                <p className="text-slate-600">Review your past extraction and processing activities.</p>
+                <CardTitle className="text-2xl font-semibold text-slate-900">Upload PDF Documents</CardTitle>
+                <p className="text-slate-600">Upload one or more PDF files to extract specific text content and generate summaries.</p>
               </CardHeader>
-               <CardContent>
-                 <RecentActivity />
-               </CardContent>
+              <CardContent>
+                <FileUpload
+                  uploadedFiles={uploadedFiles}
+                  setUploadedFiles={setUploadedFiles}
+                  onUploadComplete={() => setCurrentStep(1)}
+                />
+              </CardContent>
             </Card>
           )}
         </div>
