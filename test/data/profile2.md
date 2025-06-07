@@ -8,13 +8,13 @@ Subject B exhibits a creative and innovative personality profile with the follow
 - Above-average agreeableness (75th percentile)
 - Balanced emotional stability (65th percentile)
 
-## Section 2: Communication Style
-Analysis of communication patterns reveals:
-- Expressive and engaging communication
-- Strong presentation skills
-- Natural storytelling ability
-- Effective group facilitation
-- Dynamic interpersonal interactions
+## Section 2: Doc2Sec2Communication Style
+Doc2Sec2Analysis of communication patterns reveals:
+- Doc2Sec2Expressive and engaging communication
+- Doc2Sec2Strong presentation skills
+- Doc2Sec2Natural storytelling ability
+- Doc2Sec2Effective group facilitation
+- Doc2Sec2Dynamic interpersonal interactions
 
 ## Section 3: Work Style and Preferences
 Professional behavior assessment shows:

@@ -271,8 +271,8 @@ export default function ExtractionCriteria({ uploadedFiles, onExtractionStart }:
 
           {extractionScope === "per-document" && (
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <Label className="block text-sm font-medium text-slate-900">Document Keywords</Label>
+              <div className="flex items-center justify-start mb-3">
+                
                 <Button
                   type="button"
                   variant="outline"

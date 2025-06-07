@@ -1,12 +1,12 @@
 # Personality Profile Analysis - Subject A
 
-## Section 1: Core Personality Traits
-Subject A demonstrates a strong analytical mindset with exceptional problem-solving abilities. Their primary traits include:
-- High conscientiousness (85th percentile)
-- Moderate extraversion (65th percentile)
-- Strong emotional stability (80th percentile)
-- Above-average openness to experience (75th percentile)
-- Balanced agreeableness (60th percentile)
+## Section 1: Doc1Sec1Core Personality Traits
+Doc1Sec1Subject A demonstrates a strong analytical mindset with exceptional problem-solving abilities. Doc1Sec1Their primary traits include:
+- Doc1Sec1High conscientiousness (85th percentile)
+- Doc1Sec1Moderate extraversion (65th percentile)
+- Doc1Sec1Strong emotional stability (80th percentile)
+- Doc1Sec1Above-average openness to experience (75th percentile)
+- Doc1Sec1Balanced agreeableness (60th percentile)
 
 ## Section 2: Communication Style
 The subject's communication patterns reveal:
