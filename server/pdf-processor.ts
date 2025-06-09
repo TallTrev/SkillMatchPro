@@ -1,6 +1,6 @@
 import { Extraction, ExtractedText } from './schema';
 import { storage } from './storage';
-import { generateSummary } from './openai';
+import { generateSummary } from './gemini';
 import { extractTextFromPDF as extractPDFText, performOCR as performDocumentOCR } from './pdf-utils';
 import { PDFDocument, rgb } from 'pdf-lib';
 import * as fs from 'fs';
@@ -129,7 +129,7 @@ export async function processExtraction(extractionId: number): Promise<void> {
       extractionId,
       content: summary.content,
       wordCount: summary.wordCount,
-      model: "gpt-4",
+      model: "gemini-1.5-flash",
     });
 
     // Create a new PDF with the extracted content
